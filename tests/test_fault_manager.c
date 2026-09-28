@@ -56,6 +56,9 @@ int main(void)
     ASSERT_TRUE((faults & FAULT_OVER_TEMPERATURE) != 0U,
                 "Fault latches after consecutive bad samples");
 
+    ASSERT_TRUE(check_system(140.0f, 13.8f, 2500U, faults) == SYSTEM_FAULT,
+                "Active fault drives FAULT state");
+
     faults = fault_manager_update(127.0f, 13.8f, 2500U, FAULT_NONE);
     ASSERT_TRUE((faults & FAULT_OVER_TEMPERATURE) != 0U,
                 "Hysteresis keeps temperature fault active");
