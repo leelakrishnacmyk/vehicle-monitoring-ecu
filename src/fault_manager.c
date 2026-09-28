@@ -2,7 +2,9 @@
 #include "fault_manager.h"
 
 static FaultMask active_faults = FAULT_NONE;
-static uint8_t pending_count[32];
+static uint8_t pending_set_count[32];
+static uint8_t pending_clear_count[32];
+static uint8_t warning_active = 0U;
 
 static int fault_clear_condition(FaultCode fault,
                                  float temperature_c,
@@ -31,14 +33,37 @@ static int fault_clear_condition(FaultCode fault,
     }
 }
 
+static int warning_clear_condition(float temperature_c,
+                                   float battery_voltage_v,
+                                   uint32_t engine_rpm)
+{
+    return temperature_c < TEMP_WARN_CLEAR_C &&
+           engine_rpm < RPM_WARN_CLEAR &&
+           battery_voltage_v > VOLTAGE_WARN_LOW_CLEAR &&
+           battery_voltage_v < VOLTAGE_WARN_HIGH_CLEAR;
+}
+
+static int warning_condition(float temperature_c,
+                             float battery_voltage_v,
+                             uint32_t engine_rpm)
+{
+    return temperature_c >= TEMP_WARN_C ||
+           engine_rpm >= RPM_WARN ||
+           battery_voltage_v <= VOLTAGE_WARN_LOW ||
+           battery_voltage_v >= VOLTAGE_WARN_HIGH;
+}
+
 void fault_manager_init(void)
 {
     uint32_t i;
 
     active_faults = FAULT_NONE;
+    warning_active = 0U;
+
     for (i = 0U; i < 32U; ++i)
     {
-        pending_count[i] = 0U;
+        pending_set_count[i] = 0U;
+        pending_clear_count[i] = 0U;
     }
 }
 
@@ -93,34 +118,49 @@ FaultMask fault_manager_update(float temperature_c,
 
         if ((raw_faults & mask) != 0U)
         {
+            pending_clear_count[bit] = 0U;
+
             if ((active_faults & mask) == 0U)
             {
-                if (pending_count[bit] < FAULT_DEBOUNCE_SAMPLES)
+                if (pending_set_count[bit] < FAULT_SET_DEBOUNCE_SAMPLES)
                 {
-                    ++pending_count[bit];
+                    ++pending_set_count[bit];
                 }
 
-                if (pending_count[bit] >= FAULT_DEBOUNCE_SAMPLES)
+                if (pending_set_count[bit] >= FAULT_SET_DEBOUNCE_SAMPLES)
                 {
                     active_faults |= mask;
                 }
             }
         }
-        else if ((active_faults & mask) != 0U)
-        {
-            if (fault_clear_condition((FaultCode)mask,
-                                      temperature_c,
-                                      battery_voltage_v,
-                                      engine_rpm,
-                                      sensor_faults) != 0)
-            {
-                active_faults &= ~mask;
-                pending_count[bit] = 0U;
-            }
-        }
         else
         {
-            pending_count[bit] = 0U;
+            pending_set_count[bit] = 0U;
+
+            if ((active_faults & mask) != 0U)
+            {
+                if (fault_clear_condition((FaultCode)mask,
+                                          temperature_c,
+                                          battery_voltage_v,
+                                          engine_rpm,
+                                          sensor_faults) != 0)
+                {
+                    if (pending_clear_count[bit] < FAULT_CLEAR_DEBOUNCE_SAMPLES)
+                    {
+                        ++pending_clear_count[bit];
+                    }
+
+                    if (pending_clear_count[bit] >= FAULT_CLEAR_DEBOUNCE_SAMPLES)
+                    {
+                        active_faults &= ~mask;
+                        pending_clear_count[bit] = 0U;
+                    }
+                }
+                else
+                {
+                    pending_clear_count[bit] = 0U;
+                }
+            }
         }
     }
 
@@ -139,15 +179,26 @@ SystemState check_system(float temperature_c,
 {
     if (active_faults_now != FAULT_NONE)
     {
+        warning_active = 0U;
         return SYSTEM_FAULT;
     }
 
-    if (temperature_c >= TEMP_WARN_C ||
-        engine_rpm >= RPM_WARN ||
-        battery_voltage_v <= VOLTAGE_WARN_LOW ||
-        battery_voltage_v >= VOLTAGE_WARN_HIGH)
+    if (warning_condition(temperature_c, battery_voltage_v, engine_rpm))
     {
+        warning_active = 1U;
         return SYSTEM_WARNING;
+    }
+
+    if (warning_active != 0U)
+    {
+        if (warning_clear_condition(temperature_c,
+                                    battery_voltage_v,
+                                    engine_rpm) == 0)
+        {
+            return SYSTEM_WARNING;
+        }
+
+        warning_active = 0U;
     }
 
     return SYSTEM_NORMAL;
