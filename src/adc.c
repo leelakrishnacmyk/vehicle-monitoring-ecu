@@ -46,15 +46,15 @@ float adc_to_voltage(int adc_value)
 
 int temperature_to_adc(float temperature)
 {
-    /* Simulated sensor: 0 C -> 0.5 V, 150 C -> 2.5 V. */
-    float sensor_voltage = 0.5f + (temperature / 150.0f) * 2.0f;
+    float sensor_voltage = TEMP_SENSOR_V_OFFSET +
+                           (temperature / TEMP_SENSOR_MAX_TEMP) *
+                           TEMP_SENSOR_V_SPAN;
 
     return volts_to_adc(sensor_voltage);
 }
 
 int battery_voltage_to_adc(float voltage)
 {
-    /* 6:1 divider keeps 16 V at about 2.67 V, below the 3.3 V ADC reference. */
     float sensor_voltage = voltage / BATTERY_DIVIDER_RATIO;
 
     return volts_to_adc(sensor_voltage);
