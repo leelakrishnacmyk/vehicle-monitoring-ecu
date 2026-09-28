@@ -6,7 +6,7 @@ void timer_init(void)
     /* Timer services are provided by the HAL. */
 }
 
-void delay_ms(unsigned int milliseconds)
+void delay_ms(uint32_t milliseconds)
 {
-    hal_delay_ms((uint32_t)milliseconds);
+    hal_delay_ms(milliseconds);
 }
