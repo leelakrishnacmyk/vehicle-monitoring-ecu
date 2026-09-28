@@ -49,22 +49,26 @@ FaultMask detect_faults(float temperature_c,
 {
     FaultMask faults = sensor_faults;
 
-    if (temperature_c >= TEMP_FAULT_C)
+    if ((sensor_faults & FAULT_SENSOR_TEMP) == 0U &&
+        temperature_c >= TEMP_FAULT_C)
     {
         faults |= FAULT_OVER_TEMPERATURE;
     }
 
-    if (battery_voltage_v <= VOLTAGE_UNDER_FAULT)
+    if ((sensor_faults & FAULT_SENSOR_VOLTAGE) == 0U &&
+        battery_voltage_v <= VOLTAGE_UNDER_FAULT)
     {
         faults |= FAULT_UNDER_VOLTAGE;
     }
 
-    if (battery_voltage_v >= VOLTAGE_OVER_FAULT)
+    if ((sensor_faults & FAULT_SENSOR_VOLTAGE) == 0U &&
+        battery_voltage_v >= VOLTAGE_OVER_FAULT)
     {
         faults |= FAULT_OVER_VOLTAGE;
     }
 
-    if (engine_rpm >= RPM_FAULT)
+    if ((sensor_faults & FAULT_SENSOR_RPM) == 0U &&
+        engine_rpm >= RPM_FAULT)
     {
         faults |= FAULT_HIGH_RPM;
     }
