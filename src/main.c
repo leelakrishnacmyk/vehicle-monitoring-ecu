@@ -1,15 +1,15 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "adc.h"
 #include "config.h"
 #include "ecu_state.h"
 #include "fault_manager.h"
 #include "hal.h"
 #include "sensor.h"
 #include "system.h"
-#include "uart.h"
-#include "adc.h"
 #include "timer.h"
+#include "uart.h"
 #include "watchdog.h"
 
 static FaultMask sensor_faults_from_data(const SensorData *data)
@@ -66,7 +66,7 @@ int main(void)
         FaultMask active_faults;
         SystemState state;
 
-        /* Check the previous cycle before allowing the next watchdog kick. */
+        /* Check before starting work; the previous cycle must have kicked the watchdog. */
         watchdog_check();
         if (watchdog_reset_required() != 0U)
         {
@@ -108,9 +108,11 @@ int main(void)
         next_wake += ECU_CYCLE_MS;
         {
             uint32_t now = hal_tick_ms();
-            if (now < next_wake)
+            int32_t wait_ms = (int32_t)(next_wake - now);
+
+            if (wait_ms > 0)
             {
-                delay_ms(next_wake - now);
+                delay_ms((uint32_t)wait_ms);
             }
         }
     }
