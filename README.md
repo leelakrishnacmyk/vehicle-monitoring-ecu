@@ -198,7 +198,7 @@ Build and run the ECU simulation:
 .\build.bat
 ```
 
-The build uses C99 plus `-Wall -Wextra -Wpedantic` so common mistakes are surfaced during compilation. GCC documents `-std=c99` for selecting C99 and `-Wall`, `-Wextra`, and `-Wpedantic` for progressively stricter diagnostics. citeturn2search0turn0search1
+The build uses C99 plus `-Wall -Wextra -Wpedantic` so common mistakes are surfaced during compilation.
 
 ## Tests
 
