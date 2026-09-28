@@ -1,29 +1,34 @@
 @echo off
+setlocal
+
+if not exist build mkdir build
 
 echo ====================================
 echo   Building Vehicle Monitoring ECU
 echo ====================================
 
-gcc src/main.c ^
+gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude ^
+src/main.c ^
 src/sensor.c ^
+src/sensor_sim.c ^
 src/fault_manager.c ^
 src/ecu_state.c ^
+src/outputs.c ^
 src/uart.c ^
 src/adc.c ^
 src/timer.c ^
+src/hal.c ^
+src/system.c ^
 src/watchdog.c ^
--Iinclude ^
--o vehicle_monitor.exe
+-o build\vehicle_monitor.exe
 
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo.
     echo BUILD FAILED
-    pause
     exit /b 1
 )
 
 echo.
 echo BUILD SUCCESSFUL
 echo.
-
-vehicle_monitor.exe
+build\vehicle_monitor.exe
