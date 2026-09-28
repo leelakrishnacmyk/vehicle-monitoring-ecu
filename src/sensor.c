@@ -36,16 +36,26 @@ void sensor_read_all(SensorData *data)
         (voltage_adc > 0 && voltage_adc < (int)ADC_MAX_VALUE);
     data->rpm_valid = 1U;
 
-    /* Firmware-facing values are reconstructed from raw ADC readings. */
-    sensor_voltage = adc_to_voltage(temperature_adc);
     if (data->temperature_valid != 0U)
     {
-        data->temperature_c = ((sensor_voltage - 0.5f) / 2.0f) * 150.0f;
+        sensor_voltage = adc_to_voltage(temperature_adc);
+        data->temperature_c =
+            ((sensor_voltage - TEMP_SENSOR_V_OFFSET) /
+             TEMP_SENSOR_V_SPAN) * TEMP_SENSOR_MAX_TEMP;
+    }
+    else
+    {
+        data->temperature_c = 0.0f;
     }
 
-    sensor_voltage = adc_to_voltage(voltage_adc);
     if (data->battery_voltage_valid != 0U)
     {
-        data->battery_voltage_v = sensor_voltage * BATTERY_DIVIDER_RATIO;
+        sensor_voltage = adc_to_voltage(voltage_adc);
+        data->battery_voltage_v =
+            sensor_voltage * BATTERY_DIVIDER_RATIO;
+    }
+    else
+    {
+        data->battery_voltage_v = 0.0f;
     }
 }
