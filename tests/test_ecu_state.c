@@ -1,71 +1,63 @@
 #include <stdio.h>
 #include "ecu_state.h"
+#include "fault_manager.h"
+#include "outputs.h"
+
+#define ASSERT_TRUE(condition, name) \
+    do { \
+        ++total; \
+        if (condition) { \
+            ++passed; \
+            printf("[PASS] %s\n", name); \
+        } else { \
+            printf("[FAIL] %s\n", name); \
+        } \
+    } while (0)
 
 int main(void)
 {
     int passed = 0;
     int total = 0;
+    FaultMask faults;
+    SystemState state;
 
-    /* Test NORMAL */
-    total++;
+    ecu_state_init();
+    fault_manager_init();
 
-    update_ecu_state(SYSTEM_NORMAL);
+    faults = fault_manager_update(90.0f, 13.8f, 2500U, FAULT_NONE);
+    state = check_system(90.0f, 13.8f, 2500U, faults);
+    update_ecu_state(state);
+    ASSERT_TRUE(get_ecu_state() == SYSTEM_NORMAL,
+                "Normal conditions drive NORMAL state");
+    ASSERT_TRUE(outputs_are_enabled() != 0U,
+                "Outputs enabled in NORMAL state");
 
-    if (get_ecu_state() == SYSTEM_NORMAL)
-    {
-        printf("[PASS] NORMAL state\n");
-        passed++;
-    }
-    else
-    {
-        printf("[FAIL] NORMAL state\n");
-    }
+    faults = fault_manager_update(120.0f, 13.8f, 2500U, FAULT_NONE);
+    state = check_system(120.0f, 13.8f, 2500U, faults);
+    update_ecu_state(state);
+    ASSERT_TRUE(get_ecu_state() == SYSTEM_WARNING,
+                "Warning threshold drives WARNING state");
 
-    /* Test WARNING */
-    total++;
+    faults = fault_manager_update(140.0f, 13.8f, 2500U, FAULT_NONE);
+    state = check_system(140.0f, 13.8f, 2500U, faults);
+    update_ecu_state(state);
+    faults = fault_manager_update(140.0f, 13.8f, 2500U, FAULT_NONE);
+    state = check_system(140.0f, 13.8f, 2500U, faults);
+    update_ecu_state(state);
 
-    update_ecu_state(SYSTEM_WARNING);
+    ASSERT_TRUE(get_ecu_state() == SYSTEM_FAULT,
+                "Consecutive fault samples drive FAULT state");
+    ASSERT_TRUE(ecu_safe_state_active() != 0U && outputs_are_enabled() == 0U,
+                "FAULT state disables outputs");
 
-    if (get_ecu_state() == SYSTEM_WARNING)
-    {
-        printf("[PASS] WARNING state\n");
-        passed++;
-    }
-    else
-    {
-        printf("[FAIL] WARNING state\n");
-    }
+    faults = fault_manager_update(90.0f, 13.8f, 2500U, FAULT_NONE);
+    state = check_system(90.0f, 13.8f, 2500U, faults);
+    update_ecu_state(state);
 
-    /* Test FAULT */
-    total++;
-
-    update_ecu_state(SYSTEM_FAULT);
-
-    if (get_ecu_state() == SYSTEM_FAULT)
-    {
-        printf("[PASS] FAULT state\n");
-        passed++;
-    }
-    else
-    {
-        printf("[FAIL] FAULT state\n");
-    }
-
-    /* Test recovery */
-    total++;
-
-    update_ecu_state(SYSTEM_FAULT);
-    update_ecu_state(SYSTEM_NORMAL);
-
-    if (get_ecu_state() == SYSTEM_NORMAL)
-    {
-        printf("[PASS] FAULT -> NORMAL recovery\n");
-        passed++;
-    }
-    else
-    {
-        printf("[FAIL] FAULT -> NORMAL recovery\n");
-    }
+    ASSERT_TRUE(get_ecu_state() == SYSTEM_NORMAL &&
+                ecu_safe_state_active() == 0U &&
+                outputs_are_enabled() != 0U,
+                "Recovered conditions restore NORMAL state and outputs");
 
     printf("\n====================================\n");
     printf("State Tests Passed: %d/%d\n", passed, total);
