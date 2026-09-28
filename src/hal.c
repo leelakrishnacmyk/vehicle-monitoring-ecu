@@ -13,6 +13,7 @@ void hal_delay_ms(uint32_t milliseconds)
     Sleep(milliseconds);
 }
 #else
+#define _POSIX_C_SOURCE 200809L
 #include <time.h>
 
 uint32_t hal_tick_ms(void)
