@@ -1,32 +1,27 @@
 #ifndef FAULT_MANAGER_H
 #define FAULT_MANAGER_H
 
-typedef enum
-{
-    SYSTEM_NORMAL,
-    SYSTEM_WARNING,
-    SYSTEM_FAULT
-} SystemState;
+#include <stdint.h>
+#include "ecu_types.h"
 
-/*
- * Each fault gets its own bit.
- * This allows multiple faults to exist at the same time.
- */
-typedef enum
-{
-    FAULT_NONE             = 0,
-    FAULT_OVER_TEMPERATURE = 1 << 0,
-    FAULT_UNDER_VOLTAGE    = 1 << 1,
-    FAULT_OVER_VOLTAGE     = 1 << 2,
-    FAULT_HIGH_RPM         = 1 << 3
-} FaultCode;
+void fault_manager_init(void);
 
-int detect_faults(float temperature, float voltage, int rpm);
+FaultMask detect_faults(float temperature_c,
+                        float battery_voltage_v,
+                        uint32_t engine_rpm,
+                        FaultMask sensor_faults);
 
-SystemState check_system(float temperature, float voltage, int rpm);
+FaultMask fault_manager_update(float temperature_c,
+                               float battery_voltage_v,
+                               uint32_t engine_rpm,
+                               FaultMask sensor_faults);
 
-const char* get_state_name(SystemState state);
+SystemState check_system(float temperature_c,
+                         float battery_voltage_v,
+                         uint32_t engine_rpm,
+                         FaultMask active_faults);
 
-void print_faults(int faults);
+FaultMask get_active_faults(void);
+const char *get_state_name(SystemState state);
 
 #endif
