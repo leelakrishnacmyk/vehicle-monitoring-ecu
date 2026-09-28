@@ -1,0 +1,59 @@
+name: ECU CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ECU
+        run: |
+          mkdir -p build
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude \
+            src/main.c src/sensor.c src/sensor_sim.c src/fault_manager.c \
+            src/ecu_state.c src/outputs.c src/uart.c src/adc.c \
+            src/timer.c src/hal.c src/system.c src/watchdog.c \
+            -o build/vehicle_monitor
+
+      - name: Build fault tests
+        run: |
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude \
+            tests/test_fault_manager.c src/fault_manager.c \
+            -o build/test_fault_manager
+
+      - name: Build state tests
+        run: |
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude \
+            tests/test_ecu_state.c src/fault_manager.c src/ecu_state.c \
+            src/outputs.c src/uart.c \
+            -o build/test_ecu_state
+
+      - name: Build ADC and sensor tests
+        run: |
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude \
+            tests/test_adc_sensor.c src/adc.c src/sensor.c src/sensor_sim.c \
+            -o build/test_adc_sensor
+
+      - name: Build watchdog tests
+        run: |
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Iinclude \
+            tests/test_watchdog.c src/hal.c src/watchdog.c src/uart.c \
+            -o build/test_watchdog
+
+      - name: Run tests
+        run: |
+          ./build/test_fault_manager
+          ./build/test_ecu_state
+          ./build/test_adc_sensor
+          ./build/test_watchdog
+
+      - name: Run ECU simulation
+        run: ./build/vehicle_monitor
