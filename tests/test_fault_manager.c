@@ -64,8 +64,20 @@ int main(void)
                 "Hysteresis keeps temperature fault active");
 
     faults = fault_manager_update(TEMP_CLEAR_C, 13.8f, 2500U, FAULT_NONE);
+    ASSERT_TRUE((faults & FAULT_OVER_TEMPERATURE) != 0U,
+                "First healthy sample starts fault healing");
+
+    faults = fault_manager_update(TEMP_CLEAR_C, 13.8f, 2500U, FAULT_NONE);
     ASSERT_TRUE((faults & FAULT_OVER_TEMPERATURE) == 0U,
-                "Temperature fault clears below hysteresis threshold");
+                "Second healthy sample clears temperature fault");
+
+    fault_manager_init();
+    ASSERT_TRUE(check_system(112.0f, 13.8f, 2500U, FAULT_NONE) == SYSTEM_WARNING,
+                "Warning enters above threshold");
+    ASSERT_TRUE(check_system(108.0f, 13.8f, 2500U, FAULT_NONE) == SYSTEM_WARNING,
+                "Warning remains active inside hysteresis band");
+    ASSERT_TRUE(check_system(TEMP_WARN_CLEAR_C - 0.1f, 13.8f, 2500U, FAULT_NONE) == SYSTEM_NORMAL,
+                "Warning clears below hysteresis threshold");
 
     faults = detect_faults(140.0f, 16.0f, 7000U, FAULT_NONE);
     ASSERT_TRUE((faults & FAULT_OVER_TEMPERATURE) != 0U &&
