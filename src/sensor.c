@@ -1,5 +1,6 @@
 #include "sensor.h"
 #include "adc.h"
+#include "config.h"
 #include "sensor_sim.h"
 
 void sensor_set_scenario(uint32_t scenario)
