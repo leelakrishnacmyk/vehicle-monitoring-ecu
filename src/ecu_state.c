@@ -16,15 +16,21 @@ void update_ecu_state(SystemState new_state)
 {
     current_state = new_state;
 
-    if (new_state == SYSTEM_FAULT)
+    switch (new_state)
     {
-        safe_state_active = 1U;
-        outputs_disable();
-    }
-    else if (new_state == SYSTEM_NORMAL)
-    {
-        safe_state_active = 0U;
-        outputs_enable();
+        case SYSTEM_NORMAL:
+        case SYSTEM_WARNING:
+            /* WARNING keeps outputs operational while alerting the driver. */
+            safe_state_active = 0U;
+            outputs_enable();
+            break;
+
+        case SYSTEM_FAULT:
+        default:
+            /* FAULT enforces simulated failsafe output shutdown. */
+            safe_state_active = 1U;
+            outputs_disable();
+            break;
     }
 }
 
